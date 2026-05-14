@@ -76,6 +76,7 @@ class AppointmentListSerializer(serializers.ModelSerializer):
             "status",
             "status_display",
             "delivered_at",
+            "observations",
             "created_by_username",
             "created_at",
         ]
