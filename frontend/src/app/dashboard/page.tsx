@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, Clock, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
+import { CalendarDays, Clock, CheckCircle2, XCircle, ArrowRight, Plus, BarChart2 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import StatusBadge from "@/components/appointments/StatusBadge";
 import { appointmentsService } from "@/services/appointments";
@@ -82,6 +82,44 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="mb-8">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Acceso rápido
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Link
+                  href="/appointments"
+                  className="flex items-center gap-3 p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors"
+                >
+                  <Plus className="w-5 h-5 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">Nueva cita</p>
+                    <p className="text-xs opacity-75">Registrar entrega</p>
+                  </div>
+                </Link>
+                <Link
+                  href="/appointments"
+                  className="flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <CalendarDays className="w-5 h-5 shrink-0 text-blue-500" />
+                  <div>
+                    <p className="font-semibold text-sm">Gestionar citas</p>
+                    <p className="text-xs text-gray-500">Ver y filtrar todas</p>
+                  </div>
+                </Link>
+                <Link
+                  href="/reports"
+                  className="flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <BarChart2 className="w-5 h-5 shrink-0 text-green-500" />
+                  <div>
+                    <p className="font-semibold text-sm">Ver reporte</p>
+                    <p className="text-xs text-gray-500">Tiempos de entrega</p>
+                  </div>
+                </Link>
+              </div>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

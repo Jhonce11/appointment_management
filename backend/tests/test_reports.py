@@ -42,6 +42,25 @@ def test_report_returns_expected_fields(auth_client: APIClient, delivered_appoin
 
 
 @pytest.mark.django_db
+def test_report_avg_hours_matches_delivery_delta(
+    auth_client: APIClient, delivered_appointment: Appointment
+):
+    date_from = (timezone.now() - timedelta(days=30)).date().isoformat()
+    date_to = (timezone.now() + timedelta(days=1)).date().isoformat()
+
+    response = auth_client.get(
+        f"/api/reports/delivery-times/?date_from={date_from}&date_to={date_to}"
+    )
+    assert response.status_code == status.HTTP_200_OK
+    shirts_row = next(
+        r for r in response.data["results"] if r["product_line"] == "shirts"
+    )
+    assert shirts_row["total_deliveries"] == 1
+    assert abs(shirts_row["avg_hours"] - 2.0) < 0.1
+    assert abs(shirts_row["avg_minutes"] - 120.0) < 1
+
+
+@pytest.mark.django_db
 def test_report_without_date_params_returns_400(auth_client: APIClient):
     response = auth_client.get("/api/reports/delivery-times/")
     assert response.status_code == status.HTTP_400_BAD_REQUEST

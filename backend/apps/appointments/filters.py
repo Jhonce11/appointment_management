@@ -3,8 +3,8 @@ from .models import Appointment
 
 
 class AppointmentFilter(django_filters.FilterSet):
-    date_from = django_filters.DateTimeFilter(field_name="scheduled_at", lookup_expr="gte")
-    date_to = django_filters.DateTimeFilter(field_name="scheduled_at", lookup_expr="lte")
+    date_from = django_filters.DateFilter(field_name="scheduled_at", lookup_expr="date__gte")
+    date_to = django_filters.DateFilter(field_name="scheduled_at", lookup_expr="date__lte")
 
     class Meta:
         model = Appointment

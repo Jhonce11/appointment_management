@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   BarChart,
   Bar,
@@ -11,13 +11,20 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Search } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { reportsService } from "@/services/reports";
 import { PRODUCT_LINE_LABELS } from "@/types";
 import type { DeliveryReportRow } from "@/types";
 
 const BAR_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
+
+const REFRESH_OPTIONS = [
+  { value: 0, label: "Manual" },
+  { value: 10, label: "10 s" },
+  { value: 30, label: "30 s" },
+  { value: 60, label: "60 s" },
+];
 
 const today = new Date().toISOString().slice(0, 10);
 const firstDayOfYear = `${new Date().getFullYear()}-01-01`;
@@ -30,8 +37,11 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  async function handleSearch() {
+  const handleSearch = useCallback(async () => {
     if (!dateFrom || !dateTo) {
       setError("Ambas fechas son requeridas.");
       return;
@@ -43,12 +53,30 @@ export default function ReportsPage() {
       setRows(data.results);
       setMeta({ date_from: data.date_from, date_to: data.date_to });
       setSearched(true);
+      setLastUpdated(new Date());
     } catch {
       setError("Error al obtener el reporte. Verifica las fechas e intenta de nuevo.");
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [dateFrom, dateTo]);
+
+  // Initial load on mount
+  useEffect(() => {
+    handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-refresh: reset timer whenever interval or search function changes
+  useEffect(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (refreshInterval > 0) {
+      intervalRef.current = setInterval(handleSearch, refreshInterval * 1000);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [refreshInterval, handleSearch]);
 
   const chartData = rows.map((r) => ({
     name: PRODUCT_LINE_LABELS[r.product_line] ?? r.product_line,
@@ -86,18 +114,53 @@ export default function ReportsPage() {
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Actualización automática
+              </label>
+              <select
+                value={refreshInterval}
+                onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {REFRESH_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={handleSearch}
               disabled={isLoading}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
             >
-              <Search className="w-4 h-4" />
+              {isLoading ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Search className="w-4 h-4" />
+              )}
               {isLoading ? "Consultando..." : "Consultar"}
             </button>
           </div>
-          {error && (
-            <p className="mt-3 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
-          )}
+          <div className="flex items-center justify-between mt-3 min-h-[28px]">
+            {error ? (
+              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-1">{error}</p>
+            ) : (
+              <span />
+            )}
+            {lastUpdated && (
+              <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                Última actualización: {lastUpdated.toLocaleTimeString("es-CO")}
+                {refreshInterval > 0 && (
+                  <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    Auto ({refreshInterval}s)
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
         </div>
 
         {searched && (

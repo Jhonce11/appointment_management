@@ -1,6 +1,6 @@
 # Appointment Management System
 
-1Sistema de gestión de citas de entrega de mercancía para una empresa de retail textil.  
+Sistema de gestión de citas de entrega de mercancía para una empresa de retail textil.  
 Permite registrar, consultar y gestionar citas de entrega por proveedor y sublínea de producto, con reporte de tiempos promedio de entrega.
 
 ---
@@ -112,6 +112,31 @@ Se eligió **JWT** sobre sesiones Django por las siguientes razones:
 
 ---
 
+## Estrategia de Manejo de Errores
+
+### Backend
+
+| Capa | Mecanismo |
+|------|-----------|
+| Serializers | `raise serializers.ValidationError({"campo": "mensaje"})` → HTTP 400 con cuerpo JSON estructurado |
+| Modelos | `validate_status_transition()` lanza `ValidationError` capturado por el serializer |
+| Vistas | DRF `exception_handler` convierte excepciones no controladas en JSON con código 4xx/5xx |
+| Autenticación | `IsAuthenticated` en cada viewset retorna HTTP 401 automáticamente |
+| Parámetros del reporte | Validación explícita en `DeliveryTimeReportView.get()` retorna 400 con mensaje descriptivo |
+
+Todos los errores de validación siguen el formato: `{"campo": ["descripción del error"]}`, compatible con el estándar DRF.
+
+### Frontend
+
+| Capa | Mecanismo |
+|------|-----------|
+| Axios interceptor | Reintento automático con `refresh token` ante 401; si falla redirige a `/login` |
+| Formularios | Errores del servidor se muestran inline bajo el formulario (`setError(Object.values(data).flat().join(" "))`) |
+| Rutas protegidas | `ProtectedRoute` redirige a `/login` si no hay token en `localStorage` |
+| Estados de carga | `isLoading` deshabilita botones y muestra indicadores visuales durante peticiones |
+
+---
+
 ## Instalación y Ejecución
 
 ### Con Docker (recomendado)
@@ -136,8 +161,11 @@ docker compose up --build
 
 Al iniciar, Docker ejecuta automáticamente:
 - `migrate` — crea todas las tablas
-- `create_test_users` — crea 3 usuarios de prueba
-- `seed_data` — inserta 20 citas de ejemplo
+- `create_test_users` — crea 3 usuarios de prueba (admin, operador1, operador2)
+- `seed_data` — inserta 23 citas de ejemplo (20 distribuidas en distintos estados/proveedores + 3 fijadas en la **fecha del día actual** para el dashboard)
+
+> **Nota para evaluadores:** el seed solo se ejecuta una vez (si la BD ya tiene datos, se salta).  
+> Para reiniciar con datos frescos: `docker compose down -v && docker compose up --build`
 
 ### Sin Docker (desarrollo local)
 
@@ -154,7 +182,7 @@ pip install -r requirements/development.txt
 # Crear .env en la raíz del proyecto (ajustar POSTGRES_HOST=localhost)
 python manage.py migrate
 python manage.py create_test_users
-python manage.py seed_data
+python manage.py seed_data       # 23 citas de ejemplo
 python manage.py runserver
 ```
 
@@ -172,7 +200,28 @@ python manage.py runserver
 
 ## Variables de Entorno
 
-Ver `.env.example` para la lista completa. Variables principales:
+Copiar `.env.example` como `.env` y ajustar según el entorno:
+
+```env
+# ── Django ───────────────────────────────────────────────────
+DJANGO_SECRET_KEY=change-me-to-a-random-50-char-string
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+
+# ── Database (PostgreSQL) ─────────────────────────────────────
+POSTGRES_DB=appointments_db
+POSTGRES_USER=appointments_user
+POSTGRES_PASSWORD=appointments_pass
+POSTGRES_HOST=db          # usar 'localhost' en desarrollo local
+POSTGRES_PORT=5432
+
+# ── JWT ──────────────────────────────────────────────────────
+JWT_ACCESS_TOKEN_LIFETIME_MINUTES=60
+JWT_REFRESH_TOKEN_LIFETIME_DAYS=7
+
+# ── Frontend ─────────────────────────────────────────────────
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
+```
 
 | Variable | Descripción | Valor por defecto |
 |----------|-------------|-------------------|
@@ -222,8 +271,8 @@ Schema OpenAPI (YAML): http://localhost:8000/api/schema/
 | `supplier` | string | `?supplier=A` |
 | `product_line` | string | `?product_line=shirts` |
 | `status` | string | `?status=scheduled` |
-| `date_from` | datetime | `?date_from=2026-05-01` |
-| `date_to` | datetime | `?date_to=2026-12-31` |
+| `date_from` | date | `?date_from=2026-05-01` |
+| `date_to` | date | `?date_to=2026-12-31` |
 | `ordering` | string | `?ordering=-scheduled_at` |
 | `page` | int | `?page=2` |
 
@@ -249,17 +298,19 @@ cd backend
 pytest tests/ -v
 ```
 
-**Cobertura de tests (14 tests):**
+**Cobertura de tests (15 tests):**
 
 | Archivo | Tests |
 |---------|-------|
 | `test_auth.py` | Login válido, credenciales inválidas, 401 sin token, endpoint /me |
 | `test_appointments.py` | Fecha en pasado, fecha futura, delivered sin delivered_at, transición inválida, cancel, DELETE 405, 401 sin token |
-| `test_reports.py` | Campos esperados, sin parámetros retorna 400, 401 sin token |
+| `test_reports.py` | Campos esperados, avg_hours correcto, sin parámetros retorna 400, 401 sin token |
 
 ---
 
 ## Estructura del Proyecto
+
+> **Organización por dominio**: cada app de Django (`authentication`, `appointments`) agrupa sus propios modelos, vistas, serializers, filtros y URLs. Esto facilita la escalabilidad (agregar un nuevo dominio = nueva app) y la localización de cambios sin cruzar fronteras entre módulos. En el frontend, las carpetas `app/`, `components/`, `services/`, `context/` y `types/` siguen la convención de Next.js App Router separando presentación, lógica de negocio y tipos.
 
 ```
 appointment_management/

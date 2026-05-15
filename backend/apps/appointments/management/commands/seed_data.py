@@ -22,6 +22,13 @@ SEED_APPOINTMENTS = [
     ("C", "shoes",       "scheduled",    1),
 ]
 
+# Guaranteed today appointments so the dashboard "Citas del día" is never empty
+SEED_TODAY = [
+    ("A", "shirts",      Appointment.Status.SCHEDULED,   "09:00"),
+    ("B", "pants",       Appointment.Status.IN_PROGRESS, "11:30"),
+    ("C", "accessories", Appointment.Status.SCHEDULED,   "14:00"),
+]
+
 
 class Command(BaseCommand):
     help = "Seeds the database with sample appointments for development"
@@ -37,6 +44,7 @@ class Command(BaseCommand):
             return
 
         created_count = 0
+
         for supplier, product_line, status_val, quantity in SEED_APPOINTMENTS:
             for _ in range(quantity):
                 days_offset = random.randint(-30, 30)
@@ -45,7 +53,6 @@ class Command(BaseCommand):
 
                 if status_val == Appointment.Status.DELIVERED:
                     hours_late = random.uniform(0.5, 5.0)
-                    delivered_at = scheduled + timedelta(hours=hours_late)
                     scheduled = timezone.now() - timedelta(days=random.randint(1, 30))
                     delivered_at = scheduled + timedelta(hours=hours_late)
 
@@ -65,5 +72,19 @@ class Command(BaseCommand):
                     created_by=random.choice(users),
                 )
                 created_count += 1
+
+        now = timezone.now()
+        for supplier, product_line, status_val, hhmm in SEED_TODAY:
+            hour, minute = (int(x) for x in hhmm.split(":"))
+            scheduled = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            Appointment.objects.create(
+                scheduled_at=scheduled,
+                supplier=supplier,
+                product_line=product_line,
+                status=status_val,
+                observations=f"Cita de hoy — {supplier}/{product_line}",
+                created_by=random.choice(users),
+            )
+            created_count += 1
 
         self.stdout.write(self.style.SUCCESS(f"  created  {created_count} appointments"))

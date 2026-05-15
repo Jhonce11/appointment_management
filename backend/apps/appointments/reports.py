@@ -14,7 +14,8 @@ def get_delivery_time_report(date_from: str, date_to: str) -> list[dict]:
             ) AS avg_minutes
         FROM appointments_appointment
         WHERE status = 'delivered'
-          AND scheduled_at BETWEEN %(date_from)s AND %(date_to)s
+          AND scheduled_at >= %(date_from)s::date
+          AND scheduled_at < %(date_to)s::date + INTERVAL '1 day'
         GROUP BY product_line
         ORDER BY total_deliveries DESC;
     """

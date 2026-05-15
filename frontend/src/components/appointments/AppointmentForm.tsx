@@ -58,7 +58,12 @@ export default function AppointmentForm({ appointment, onSuccess, onClose }: Pro
         if (statusChanged && needsDeliveredAt) payload.delivered_at = form.delivered_at;
         await appointmentsService.update(appointment.id, payload);
       } else {
-        await appointmentsService.create(form);
+        await appointmentsService.create({
+          scheduled_at: form.scheduled_at,
+          supplier: form.supplier,
+          product_line: form.product_line,
+          observations: form.observations,
+        });
       }
       onSuccess();
     } catch (err: unknown) {
