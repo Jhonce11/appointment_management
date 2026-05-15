@@ -25,7 +25,12 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request: Request, *args, **kwargs) -> Response:
         return Response(
-            {"detail": "La eliminación no está permitida. Use la acción 'cancel' para cancelar una cita."},
+            {
+                "detail": (
+                    "La eliminación no está permitida. "
+                    "Use la acción 'cancel' para cancelar una cita."
+                )
+            },
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 

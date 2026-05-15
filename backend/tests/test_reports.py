@@ -49,5 +49,6 @@ def test_report_without_date_params_returns_400(auth_client: APIClient):
 
 @pytest.mark.django_db
 def test_report_requires_authentication(api_client: APIClient):
-    response = api_client.get("/api/reports/delivery-times/?date_from=2026-01-01&date_to=2026-12-31")
+    url = "/api/reports/delivery-times/?date_from=2026-01-01&date_to=2026-12-31"
+    response = api_client.get(url)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED

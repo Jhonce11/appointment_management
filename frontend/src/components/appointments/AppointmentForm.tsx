@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { appointmentsService } from "@/services/appointments";
-import type { Appointment } from "@/types";
+import { STATUS_LABELS } from "@/types";
+import type { Appointment, AppointmentStatus } from "@/types";
 
 interface Props {
   appointment?: Appointment;
@@ -11,11 +12,11 @@ interface Props {
   onClose: () => void;
 }
 
-const EMPTY_FORM = {
-  scheduled_at: "",
-  supplier: "",
-  product_line: "",
-  observations: "",
+const ALLOWED_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  scheduled:   ["in_progress", "cancelled"],
+  in_progress: ["delivered", "cancelled"],
+  delivered:   [],
+  cancelled:   [],
 };
 
 export default function AppointmentForm({ appointment, onSuccess, onClose }: Props) {
@@ -25,9 +26,17 @@ export default function AppointmentForm({ appointment, onSuccess, onClose }: Pro
     supplier: appointment?.supplier ?? "",
     product_line: appointment?.product_line ?? "",
     observations: appointment?.observations ?? "",
+    status: appointment?.status ?? "",
+    delivered_at: appointment?.delivered_at?.slice(0, 16) ?? "",
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const nextStatuses = appointment
+    ? ALLOWED_TRANSITIONS[appointment.status]
+    : [];
+  const statusChanged = isEdit && form.status !== appointment?.status;
+  const needsDeliveredAt = form.status === "delivered";
 
   function set(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -39,7 +48,15 @@ export default function AppointmentForm({ appointment, onSuccess, onClose }: Pro
     setIsLoading(true);
     try {
       if (isEdit) {
-        await appointmentsService.update(appointment.id, form);
+        const payload: Record<string, string> = {
+          scheduled_at: form.scheduled_at,
+          supplier: form.supplier,
+          product_line: form.product_line,
+          observations: form.observations,
+        };
+        if (statusChanged) payload.status = form.status;
+        if (statusChanged && needsDeliveredAt) payload.delivered_at = form.delivered_at;
+        await appointmentsService.update(appointment.id, payload);
       } else {
         await appointmentsService.create(form);
       }
@@ -113,6 +130,43 @@ export default function AppointmentForm({ appointment, onSuccess, onClose }: Pro
               <option value="accessories">Accesorios</option>
             </select>
           </div>
+
+          {isEdit && nextStatuses.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cambiar estado
+              </label>
+              <select
+                value={form.status}
+                onChange={(e) => set("status", e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={appointment!.status}>
+                  {STATUS_LABELS[appointment!.status]} (actual)
+                </option>
+                {nextStatuses.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {isEdit && needsDeliveredAt && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fecha y hora de entrega real <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                required={needsDeliveredAt}
+                value={form.delivered_at}
+                onChange={(e) => set("delivered_at", e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>

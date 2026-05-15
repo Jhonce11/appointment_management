@@ -42,7 +42,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
         if new_status == Appointment.Status.DELIVERED and not delivered_at:
             raise serializers.ValidationError(
-                {"delivered_at": "El campo delivered_at es requerido cuando el estado es 'Entregada'."}
+                {
+                    "delivered_at": (
+                        "El campo delivered_at es requerido "
+                        "cuando el estado es 'Entregada'."
+                    )
+                }
             )
 
         if instance and new_status and new_status != instance.status:

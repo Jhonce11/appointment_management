@@ -41,7 +41,9 @@ def test_create_appointment_with_future_date_returns_201(auth_client: APIClient)
 
 
 @pytest.mark.django_db
-def test_delivered_status_requires_delivered_at(auth_client: APIClient, future_appointment: Appointment):
+def test_delivered_status_requires_delivered_at(
+    auth_client: APIClient, future_appointment: Appointment
+):
     future_appointment.status = Appointment.Status.IN_PROGRESS
     future_appointment.save()
 
@@ -55,7 +57,9 @@ def test_delivered_status_requires_delivered_at(auth_client: APIClient, future_a
 
 
 @pytest.mark.django_db
-def test_invalid_status_transition_returns_400(auth_client: APIClient, future_appointment: Appointment):
+def test_invalid_status_transition_returns_400(
+    auth_client: APIClient, future_appointment: Appointment
+):
     future_appointment.status = Appointment.Status.IN_PROGRESS
     future_appointment.save()
     future_appointment.status = Appointment.Status.DELIVERED
@@ -71,7 +75,9 @@ def test_invalid_status_transition_returns_400(auth_client: APIClient, future_ap
 
 
 @pytest.mark.django_db
-def test_cancel_action_sets_status_to_cancelled(auth_client: APIClient, future_appointment: Appointment):
+def test_cancel_action_sets_status_to_cancelled(
+    auth_client: APIClient, future_appointment: Appointment
+):
     response = auth_client.post(f"/api/appointments/{future_appointment.id}/cancel/")
     assert response.status_code == status.HTTP_200_OK
     assert response.data["status"] == "cancelled"

@@ -33,7 +33,9 @@ class DeliveryTimeReportView(APIView):
         results = [
             {
                 "product_line": row["product_line"],
-                "product_line_display": PRODUCT_LINE_LABELS.get(row["product_line"], row["product_line"]),
+                "product_line_display": PRODUCT_LINE_LABELS.get(
+                    row["product_line"], row["product_line"]
+                ),
                 "total_deliveries": row["total_deliveries"],
                 "avg_hours": round(float(row["avg_hours"]), 2) if row["avg_hours"] else 0,
                 "avg_minutes": round(float(row["avg_minutes"]), 2) if row["avg_minutes"] else 0,

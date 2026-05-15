@@ -32,12 +32,13 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
+        const today = new Date().toISOString().slice(0, 10);
         const [s, ip, d, c, up] = await Promise.all([
           appointmentsService.list({ status: "scheduled", page: 1 }),
           appointmentsService.list({ status: "in_progress", page: 1 }),
           appointmentsService.list({ status: "delivered", page: 1 }),
           appointmentsService.list({ status: "cancelled", page: 1 }),
-          appointmentsService.list({ status: "scheduled", ordering: "scheduled_at", page: 1 }),
+          appointmentsService.list({ date_from: today, date_to: today, ordering: "scheduled_at", page: 1 }),
         ]);
         setCounts({
           scheduled: s.data.count,
@@ -85,7 +86,7 @@ export default function DashboardPage() {
 
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-900">Próximas citas programadas</h2>
+                <h2 className="font-semibold text-gray-900">Citas del día</h2>
                 <Link
                   href="/appointments"
                   className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
@@ -96,7 +97,7 @@ export default function DashboardPage() {
 
               {upcoming.length === 0 ? (
                 <div className="text-center py-12 text-gray-400 text-sm">
-                  No hay citas programadas.
+                  No hay citas registradas para hoy.
                 </div>
               ) : (
                 <table className="w-full text-sm">
